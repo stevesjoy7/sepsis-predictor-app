@@ -1,0 +1,20 @@
+# Environments
+venv/
+.venv/
+env/
+
+# Python cache
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Node
+node_modules/
+dist/
+
+# Database
+*.db
+patients.db
+
+# OS
+.DS_Store
