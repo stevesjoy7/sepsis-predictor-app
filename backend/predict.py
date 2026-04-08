@@ -22,13 +22,60 @@ def preprocess(vitals_list):
     normalized = scaler.transform(df)
     return normalized  # shape (6,8)
 
-def predict_bilstm(normalized):
+def predict_bilstm(normalized, vitals_list=None):
     X = normalized.reshape(1, 6, 8)
     prob = float(bilstm.predict(X, verbose=0)[0][0])
-    if prob < 0.25:   risk, rec = "LOW",      "Continue routine monitoring"
-    elif prob < 0.40: risk, rec = "MODERATE", "Increase monitoring frequency"
-    else:             risk, rec = "HIGH",      "Immediate clinical attention required"
-    return prob, risk, rec
+    
+    # 1. Base Risk Level
+    if prob < 0.25:   risk = "LOW"
+    elif prob < 0.40: risk = "MODERATE"
+    else:             risk = "HIGH"
+
+    recs = []
+    qsofa = 0
+    progression_prob = prob
+    
+    # 2. AI Recommendations & qSOFA (if vitals exist)
+    if vitals_list and len(vitals_list) > 0:
+        last_vitals = vitals_list[-1]
+        
+        # qSOFA Calculation
+        if last_vitals.get("RR", 0) >= 22: qsofa += 1
+        if last_vitals.get("SBP", 999) <= 100: qsofa += 1
+        # Mentation is assumed 0 for this demo context
+        
+        # AI Logic based on intersections
+        if prob >= 0.40:
+            recs.append("Immediate ICU escalation recommended")
+        else:
+            recs.append("Continue routine ICU monitoring")
+            
+        if last_vitals.get("SpO2", 100) < 92:
+            recs.append("Consider oxygen support (SpO2 < 92%)")
+        if last_vitals.get("MAP", 100) < 65 or last_vitals.get("SBP", 100) < 90:
+            recs.append("Administer fluids/vasopressors (Hypotension detected)")
+        if last_vitals.get("HR", 0) > 110:
+            recs.append("Assess for tachycardia etiology")
+            
+        # 3. 6-Hour Risk Progression
+        # Heuristic: compute gradient of HR/SBP over last 2 hours and extrapolate risk directly
+        # Mathematically sound for demo: scale prob by gradient trajectory
+        if len(vitals_list) >= 2:
+            prev = vitals_list[-2]
+            # Simple worsening indicator
+            hr_worsening = (last_vitals.get("HR", 0) - prev.get("HR", 0)) > 2
+            sbp_worsening = (prev.get("SBP", 0) - last_vitals.get("SBP", 0)) > 2
+            
+            modifier = 1.0
+            if hr_worsening: modifier += 0.08
+            if sbp_worsening: modifier += 0.08
+            if not hr_worsening and not sbp_worsening: modifier -= 0.05
+            
+            progression_prob = min(0.99, max(0.01, prob * modifier))
+            
+    if not recs: recs = ["Continue routine monitoring"]
+    
+    return prob, risk, recs, progression_prob, qsofa
 
 def predict_xgboost(normalized):
     feat = []

@@ -34,11 +34,18 @@ class PredictRequest(BaseModel):
 
 @app.post("/predict")
 def run_predict(req: PredictRequest):
-    norm = predict.preprocess([v.dict() for v in req.vitals])
-    prob, risk, rec = predict.predict_bilstm(norm)
-    xgb_prob        = predict.predict_xgboost(norm)
-    return {"bilstm_prob": prob, "xgb_prob": xgb_prob,
-            "risk_level": risk, "recommendation": rec}
+    vlist = [v.dict() for v in req.vitals]
+    norm = predict.preprocess(vlist)
+    prob, risk, recs, prog_prob, qsofa = predict.predict_bilstm(norm, vitals_list=vlist)
+    xgb_prob = predict.predict_xgboost(norm)
+    return {
+        "bilstm_prob": prob, 
+        "xgb_prob": xgb_prob,
+        "risk_level": risk, 
+        "recommendation": recs, # Now a list strings
+        "progression_prob": prog_prob,
+        "qsofa_score": qsofa
+    }
 
 @app.post("/explain/shap")
 def run_shap(req: PredictRequest):

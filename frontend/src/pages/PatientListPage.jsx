@@ -76,11 +76,34 @@ export default function PatientListPage() {
 
   return (
     <div className="dashboard-container">
-      <div className="dashboard-header">
-        <h1 className="dashboard-title">ICU Patients</h1>
-        <button className="btn-primary" style={{ width: 'auto' }} onClick={() => setShowModal(true)}>
-          + Add Patient
-        </button>
+      {/* Top Navigation Bar */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32, padding: '16px 24px', background: 'var(--bg-panel)', borderRadius: 16, border: '1px solid var(--border-color)', boxShadow: 'var(--shadow-panel)' }}>
+         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ width: 40, height: 40, borderRadius: 10, background: 'linear-gradient(135deg, var(--accent-blue), #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 20, fontWeight: 'bold' }}>
+               🏥
+            </div>
+            <h1 className="dashboard-title" style={{ marginBottom: 0 }}>ICU Central Monitor</h1>
+         </div>
+         <div style={{ display: 'flex', gap: 16 }}>
+            <button className="btn-primary" onClick={() => navigate('/evaluation')} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--text-secondary)' }}>
+               📊 Model Validation
+            </button>
+            <button 
+               onClick={() => setShowModal(true)}
+               style={{ 
+                  background: 'linear-gradient(135deg, var(--color-green), #059669)', 
+                  border: 'none', color: '#fff', padding: '10px 24px', borderRadius: 8, 
+                  fontWeight: 600, fontSize: 15, cursor: 'pointer', 
+                  boxShadow: '0 4px 14px rgba(34, 197, 94, 0.4)',
+                  transition: 'transform 0.2s, box-shadow 0.2s',
+                  display: 'flex', alignItems: 'center', gap: 8
+               }}
+               onMouseOver={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(34, 197, 94, 0.6)'; }}
+               onMouseOut={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 14px rgba(34, 197, 94, 0.4)'; }}
+            >
+               <span style={{ fontSize: 18 }}>+</span> Admit Patient
+            </button>
+         </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 20 }}>
@@ -110,7 +133,7 @@ export default function PatientListPage() {
               <div 
                 key={p.id} 
                 onClick={() => navigate(`/patient/${p.id}`)}
-                className="patient-card glass-panel" 
+                className={`patient-card glass-panel ${isHigh ? 'danger-card' : ''}`}
                 style={{ 
                   display: 'flex', flexDirection: 'column', padding: 20, cursor: 'pointer',
                   background: '#11151c', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 16,
