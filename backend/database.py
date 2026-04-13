@@ -17,12 +17,26 @@ import sqlite3
 DB_PATH = os.path.join(os.path.dirname(__file__), "patients.db")
 
 def _get_pg_conn():
-    url = urllib.parse.urlparse(DATABASE_URL)
-    user = urllib.parse.unquote(url.username)
-    password = urllib.parse.unquote(url.password)
-    host = url.hostname
-    port = url.port
-    database = url.path[1:]
+    # Because urllib.parse violently crashes if the user puts an unencoded '@' in their password,
+    # we must completely manually parse the string backwards.
+    clean_url = DATABASE_URL.replace("postgresql://", "").replace("postgres://", "")
+    
+    # Split by the LAST '@' symbol safely separating the password from the host
+    auth_part, host_part = clean_url.rsplit("@", 1)
+    user, password = auth_part.split(":", 1)
+    
+    # Safely URL decode just in case they actually did URL encode it
+    user = urllib.parse.unquote(user)
+    password = urllib.parse.unquote(password)
+    
+    host_port, database = host_part.split("/", 1)
+    
+    if ":" in host_port:
+        host, port_str = host_port.split(":")
+        port = int(port_str)
+    else:
+        host = host_port
+        port = 5432
     
     # Supabase absolutely requires SSL. By default pg8000 does not use SSL.
     ssl_context = ssl.create_default_context()
