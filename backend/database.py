@@ -61,7 +61,8 @@ def init_db():
         # Postgres Initialization via pg8000 (100% pure Python, no C-libpq)
         conn = _get_pg_conn()
         try:
-            with conn.cursor() as cur:
+            cur = conn.cursor()
+            try:
                 cur.execute("""
                     CREATE TABLE IF NOT EXISTS patients (
                         id TEXT PRIMARY KEY,
@@ -72,6 +73,8 @@ def init_db():
                         lastUpdated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     )
                 """)
+            finally:
+                cur.close()
             conn.commit()
         finally:
             conn.close()
@@ -109,7 +112,8 @@ def _execute(query, params=(), fetch_all=False, fetch_one=False):
         # Convert SQLite ? bindings to Postgres %s
         pg_query = query.replace("?", "%s")
         try:
-            with conn.cursor() as cur:
+            cur = conn.cursor()
+            try:
                 cur.execute(pg_query, params)
                 
                 if not fetch_all and not fetch_one:
@@ -138,6 +142,8 @@ def _execute(query, params=(), fetch_all=False, fetch_one=False):
                     return d
                     
                 return [] if fetch_all else None
+            finally:
+                cur.close()
         finally:
             conn.close()
     else:
