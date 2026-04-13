@@ -4,11 +4,11 @@ import uuid
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
-# Try to import psycopg2 dynamically depending on environment
+# Try to import psycopg dynamically depending on environment
 try:
     if DATABASE_URL:
-        import psycopg2
-        import psycopg2.extras
+        import psycopg
+        from psycopg.rows import dict_row
 except ImportError:
     pass
 
@@ -19,8 +19,7 @@ DB_PATH = os.path.join(os.path.dirname(__file__), "patients.db")
 def init_db():
     if DATABASE_URL:
         # Postgres Initialization
-        conn = psycopg2.connect(DATABASE_URL)
-        conn.autocommit = True
+        conn = psycopg.connect(DATABASE_URL, autocommit=True)
         with conn.cursor() as cur:
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS patients (
@@ -63,21 +62,21 @@ def _execute(query, params=(), fetch_all=False, fetch_one=False):
     """Abstraction layer handling SQLite vs Postgres syntax and cursors"""
     if DATABASE_URL:
         # Postgres flow
-        conn = psycopg2.connect(DATABASE_URL)
+        conn = psycopg.connect(DATABASE_URL)
         # Convert SQLite ? bindings to Postgres %s
         pg_query = query.replace("?", "%s")
         try:
-            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            with conn.cursor(row_factory=dict_row) as cur:
                 cur.execute(pg_query, params)
                 
-                # Psycopg2 requires explicit commits for inserts/updates
+                # Psycopg requires explicit commits for inserts/updates
                 if not fetch_all and not fetch_one:
                     conn.commit()
                     return None
                     
                 res = cur.fetchall() if fetch_all else cur.fetchone()
                 
-                # Parse vitals manually since psycopg2 doesn't use dict_factory
+                # Parse vitals manually since psycopg doesn't use dict_factory here
                 if res and type(res) == list:
                     for d in res:
                         if "vitals" in d and d["vitals"]:
