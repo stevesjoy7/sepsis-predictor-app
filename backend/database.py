@@ -2,6 +2,7 @@ import os
 import json
 import uuid
 import urllib.parse
+import ssl
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
@@ -17,12 +18,25 @@ DB_PATH = os.path.join(os.path.dirname(__file__), "patients.db")
 
 def _get_pg_conn():
     url = urllib.parse.urlparse(DATABASE_URL)
-    user = url.username
-    password = url.password
+    user = urllib.parse.unquote(url.username)
+    password = urllib.parse.unquote(url.password)
     host = url.hostname
     port = url.port
     database = url.path[1:]
-    return pg8000.dbapi.connect(user=user, password=password, host=host, port=port, database=database)
+    
+    # Supabase absolutely requires SSL. By default pg8000 does not use SSL.
+    ssl_context = ssl.create_default_context()
+    ssl_context.check_hostname = False
+    ssl_context.verify_mode = ssl.CERT_NONE
+
+    return pg8000.dbapi.connect(
+        user=user, 
+        password=password, 
+        host=host, 
+        port=port, 
+        database=database, 
+        ssl_context=ssl_context
+    )
 
 def init_db():
     if DATABASE_URL:
