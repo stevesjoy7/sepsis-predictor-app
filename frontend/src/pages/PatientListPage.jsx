@@ -85,6 +85,9 @@ export default function PatientListPage() {
             <h1 className="dashboard-title" style={{ marginBottom: 0 }}>ICU Central Monitor</h1>
          </div>
          <div style={{ display: 'flex', gap: 16 }}>
+            <button className="btn-primary" onClick={() => { localStorage.removeItem("sepsis_auth"); navigate('/auth'); }} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--text-muted)' }}>
+               🚪 Sign Out
+            </button>
             <button className="btn-primary" onClick={() => navigate('/evaluation')} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--text-secondary)' }}>
                📊 Model Validation
             </button>
