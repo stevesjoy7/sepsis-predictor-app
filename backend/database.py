@@ -31,6 +31,10 @@ def _get_pg_conn():
     
     host_port, database = host_part.split("/", 1)
     
+    # Strip any parameters like "?pgbouncer=true" that Supabase appends to the end
+    if "?" in database:
+        database = database.split("?", 1)[0]
+    
     if ":" in host_port:
         host, port_str = host_port.split(":")
         port = int(port_str)
