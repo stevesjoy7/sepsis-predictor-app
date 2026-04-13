@@ -129,6 +129,9 @@ def _execute(query, params=(), fetch_all=False, fetch_one=False):
                     final_res = []
                     for row in res:
                         d = dict(zip(columns, row))
+                        if "lastriskscore" in d: d["lastRiskScore"] = d.pop("lastriskscore")
+                        if "lastupdated" in d: d["lastUpdated"] = d.pop("lastupdated")
+                        
                         if "vitals" in d and d["vitals"]:
                             try: d["vitals"] = json.loads(d["vitals"])
                             except: d["vitals"] = None
@@ -136,6 +139,9 @@ def _execute(query, params=(), fetch_all=False, fetch_one=False):
                     return final_res
                 elif fetch_one and res:
                     d = dict(zip(columns, res))
+                    if "lastriskscore" in d: d["lastRiskScore"] = d.pop("lastriskscore")
+                    if "lastupdated" in d: d["lastUpdated"] = d.pop("lastupdated")
+                    
                     if "vitals" in d and d["vitals"]:
                         try: d["vitals"] = json.loads(d["vitals"])
                         except: d["vitals"] = None
