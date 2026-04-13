@@ -1,4 +1,15 @@
+import os
+# Force TensorFlow/XGBoost to use exactly 1 thread to prevent Render Out-Of-Memory (OOM) Segfaults
+os.environ['TF_NUM_INTEROP_THREADS'] = '1'
+os.environ['TF_NUM_INTRAOP_THREADS'] = '1'
+os.environ['OMP_NUM_THREADS'] = '1'
+os.environ['MKL_NUM_THREADS'] = '1'
+os.environ['OPENBLAS_NUM_THREADS'] = '1'
+
 import numpy as np, joblib
+import tensorflow as tf
+tf.config.threading.set_inter_op_parallelism_threads(1)
+tf.config.threading.set_intra_op_parallelism_threads(1)
 from tensorflow.keras.models import load_model
 
 # Load once at module level — never inside a function
