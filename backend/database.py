@@ -1,14 +1,13 @@
 import os
 import json
 import uuid
+import urllib.parse
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
-# Try to import psycopg dynamically depending on environment
 try:
     if DATABASE_URL:
-        import psycopg
-        from psycopg.rows import dict_row
+        import pg8000.dbapi
 except ImportError:
     pass
 
@@ -16,22 +15,34 @@ import sqlite3
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "patients.db")
 
+def _get_pg_conn():
+    url = urllib.parse.urlparse(DATABASE_URL)
+    user = url.username
+    password = url.password
+    host = url.hostname
+    port = url.port
+    database = url.path[1:]
+    return pg8000.dbapi.connect(user=user, password=password, host=host, port=port, database=database)
+
 def init_db():
     if DATABASE_URL:
-        # Postgres Initialization
-        conn = psycopg.connect(DATABASE_URL, autocommit=True)
-        with conn.cursor() as cur:
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS patients (
-                    id TEXT PRIMARY KEY,
-                    name TEXT NOT NULL,
-                    age TEXT,
-                    vitals TEXT,
-                    lastRiskScore REAL,
-                    lastUpdated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            """)
-        conn.close()
+        # Postgres Initialization via pg8000 (100% pure Python, no C-libpq)
+        conn = _get_pg_conn()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS patients (
+                        id TEXT PRIMARY KEY,
+                        name TEXT NOT NULL,
+                        age TEXT,
+                        vitals TEXT,
+                        lastRiskScore REAL,
+                        lastUpdated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+            conn.commit()
+        finally:
+            conn.close()
     else:
         # Local SQLite Initialization
         with sqlite3.connect(DB_PATH) as conn:
@@ -62,32 +73,39 @@ def _execute(query, params=(), fetch_all=False, fetch_one=False):
     """Abstraction layer handling SQLite vs Postgres syntax and cursors"""
     if DATABASE_URL:
         # Postgres flow
-        conn = psycopg.connect(DATABASE_URL)
+        conn = _get_pg_conn()
         # Convert SQLite ? bindings to Postgres %s
         pg_query = query.replace("?", "%s")
         try:
-            with conn.cursor(row_factory=dict_row) as cur:
+            with conn.cursor() as cur:
                 cur.execute(pg_query, params)
                 
-                # Psycopg requires explicit commits for inserts/updates
                 if not fetch_all and not fetch_one:
                     conn.commit()
                     return None
                     
                 res = cur.fetchall() if fetch_all else cur.fetchone()
                 
-                # Parse vitals manually since psycopg doesn't use dict_factory here
-                if res and type(res) == list:
-                    for d in res:
+                # Fetch row description for dictionary binding
+                columns = [col[0] for col in cur.description] if cur.description else []
+                
+                if fetch_all and res:
+                    final_res = []
+                    for row in res:
+                        d = dict(zip(columns, row))
                         if "vitals" in d and d["vitals"]:
                             try: d["vitals"] = json.loads(d["vitals"])
                             except: d["vitals"] = None
-                elif res and type(res) == dict:
-                    if "vitals" in res and res["vitals"]:
-                        try: res["vitals"] = json.loads(res["vitals"])
-                        except: res["vitals"] = None
-                        
-                return res
+                        final_res.append(d)
+                    return final_res
+                elif fetch_one and res:
+                    d = dict(zip(columns, res))
+                    if "vitals" in d and d["vitals"]:
+                        try: d["vitals"] = json.loads(d["vitals"])
+                        except: d["vitals"] = None
+                    return d
+                    
+                return [] if fetch_all else None
         finally:
             conn.close()
     else:
@@ -101,7 +119,6 @@ def _execute(query, params=(), fetch_all=False, fetch_one=False):
             conn.commit()
 
 def get_all_patients():
-    # Postgres doesn't order cleanly without a timestamp if just inserting, but ID falls back ok.
     return _execute("SELECT * FROM patients ORDER BY id DESC", fetch_all=True)
 
 def get_patient(p_id):
