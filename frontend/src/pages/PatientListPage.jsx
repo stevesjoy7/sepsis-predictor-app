@@ -47,16 +47,20 @@ export default function PatientListPage() {
     e.preventDefault();
     if (!formData.name) return;
 
-    if (editingId) {
-      await updatePatient(editingId, formData);
-    } else {
-      await createPatient(formData);
+    try {
+      if (editingId) {
+        await updatePatient(editingId, formData);
+      } else {
+        await createPatient(formData);
+      }
+      await loadPatients();
+      setShowModal(false);
+      setFormData({ name: "", age: "" });
+      setEditingId(null);
+    } catch (error) {
+      console.error(error);
+      alert("Failed to save patient. Please check if your backend and database services are active.");
     }
-    
-    await loadPatients();
-    setShowModal(false);
-    setFormData({ name: "", age: "" });
-    setEditingId(null);
   };
 
   const handleEdit = (e, p) => {
