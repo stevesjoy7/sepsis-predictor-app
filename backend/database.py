@@ -53,7 +53,8 @@ def _get_pg_conn():
         host=host, 
         port=port, 
         database=database, 
-        ssl_context=ssl_context
+        ssl_context=ssl_context,
+        timeout=10
     )
 
 def init_db():
